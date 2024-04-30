@@ -1,6 +1,6 @@
 {
-    "name": "lecturize/laravel-taxonomies",
-    "description": "Simple, nestable Terms & Taxonomies (similar to WordPress) for Laravel.",
+    "name": "bnqtoan/laravel-taxonomies",
+    "description": "Simple, nestable Terms & Taxonomies (similar to WordPress) for Laravel (forked from lecturize/laravel-taxonomies with Laravel 11 compatible)",
     "homepage" : "https://github.com/Lecturize/Laravel-Taxonomies",
     "license": "MIT",
     "type": "library",
@@ -21,11 +21,11 @@
         }
     ],
     "require": {
-        "php": "^8.0",
-        "cviebrock/eloquent-sluggable" : "^9.0|^10.0",
-        "illuminate/database": "^9.0|^10.0",
-        "illuminate/support": "^9.0|^10.0",
-        "webpatser/laravel-uuid": "^3.0|^4.0"
+        "php": "^8.2",
+        "cviebrock/eloquent-sluggable" : "^9.0|^10.0|^11.0",
+        "illuminate/database": "^9.0|^10.0|^11.0",
+        "illuminate/support": "^9.0|^10.0|^11.0",
+        "webpatser/laravel-uuid": "^3.0|^4.0",
     },
     "require-dev": {
         "mockery/mockery": "^1.4",
