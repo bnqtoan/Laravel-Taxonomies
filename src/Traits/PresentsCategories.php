@@ -1,4 +1,6 @@
-<?php namespace Lecturize\Taxonomies\Traits;
+<?php
+
+namespace Lecturize\Taxonomies\Traits;
 
 use Exception;
 use Illuminate\Http\RedirectResponse;
@@ -15,7 +17,7 @@ trait PresentsCategories
      * Check taxonomy path.
      *
      * @param  Taxonomy|null  $current
-     * @param  string|null    $route
+     * @param  string         $route
      * @return null|RedirectResponse
      * @throws Exception
      */
@@ -48,7 +50,7 @@ trait PresentsCategories
      * @param  string|null    $slug
      * @param  Taxonomy|null  $current
      * @param  Taxonomy|null  $parent
-     * @param  string|null    $route
+     * @param  string         $route
      * @return null|RedirectResponse
      * @throws Exception
      * @throws NotFoundHttpException
@@ -70,7 +72,7 @@ trait PresentsCategories
 
         // a taxonomy has been found, see if it matches the given parent
         // redirect to calculated destination
-        if ($current->parent_id !== ($parent ? $parent->id : null))
+        if ($current->parent_id !== ($parent?->id))
             return redirect()->route($route, $current->getRouteParameters());
 
         return null;

@@ -1,4 +1,6 @@
-<?php namespace Lecturize\Taxonomies\Traits;
+<?php
+
+namespace Lecturize\Taxonomies\Traits;
 
 use Lecturize\Taxonomies\Models\Taxonomy;
 use Lecturize\Taxonomies\Models\Term;
@@ -13,7 +15,7 @@ trait ModelFinder
      * Find term by slug.
      *
      * @param  string  $slug
-     * @return Term
+     * @return Term|null
      */
     public function findTerm(string $slug): ?Term
     {
@@ -26,9 +28,9 @@ trait ModelFinder
      * @param  string|int  $term
      * @param  string      $taxonomy
      * @param  string      $term_field
-     * @return Taxonomy
+     * @return Taxonomy|null
      */
-    public function findTaxonomyByTerm($term, string $taxonomy, string $term_field = 'id'): ?Taxonomy
+    public function findTaxonomyByTerm(string|int $term, string $taxonomy, string $term_field = 'id'): ?Taxonomy
     {
         return $this->findCategory($term, $taxonomy, $term_field);
     }
@@ -39,12 +41,12 @@ trait ModelFinder
      * @param  string|int  $term
      * @param  string      $taxonomy
      * @param  string      $term_field
-     * @return Taxonomy
+     * @return Taxonomy|null
      */
-    public function findCategory($term, string $taxonomy, string $term_field = 'title'): ?Taxonomy
+    public function findCategory(string|int $term, string $taxonomy, string $term_field = 'title'): ?Taxonomy
     {
         return Taxonomy::taxonomy($taxonomy)
-                       ->term($term, $term_field)
+                       ->byTerm($term, $term_field)
                        ->first();
     }
 }

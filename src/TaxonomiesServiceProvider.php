@@ -1,12 +1,18 @@
-<?php namespace Lecturize\Taxonomies;
+<?php
+
+namespace Lecturize\Taxonomies;
 
 use Illuminate\Support\ServiceProvider;
 
 class TaxonomiesServiceProvider extends ServiceProvider
 {
-    protected $migrations = [
-        'CreateTaxonomiesTable'  => 'create_taxonomies_table',
-        'ExtendTaxonomiesTables' => 'extend_taxonomies_tables'
+    protected array $migrations = [
+        'CreateTaxonomiesTable'          => 'create_taxonomies_table',
+        'ExtendTaxonomiesTables'         => 'extend_taxonomies_tables',
+        'AddVisibilityToTaxonomiesTable' => 'add_visibility_to_taxonomies_table',
+        'AddMetaDescToTaxonomiesTable'   => 'add_meta_desc_to_taxonomies_table',
+        'AddPrimaryKeyToTaxablesTable'   => 'add_primary_key_to_taxables_table',
+        'AddTimestampsToTaxablesTable'   => 'add_timestamps_to_taxables_table',
     ];
 
      public function boot()
@@ -25,18 +31,7 @@ class TaxonomiesServiceProvider extends ServiceProvider
          });
      }
 
-    /** @inheritdoc */
-     public function provides()
-     {
-          return [];
-     }
-
-    /**
-     * Publish and merge the config file.
-     *
-     * @return void
-     */
-    private function handleConfig()
+    private function handleConfig(): void
     {
         $configPath = __DIR__ . '/../config/config.php';
 
@@ -45,12 +40,7 @@ class TaxonomiesServiceProvider extends ServiceProvider
         $this->mergeConfigFrom($configPath, 'lecturize');
     }
 
-    /**
-     * Publish migrations.
-     *
-     * @return void
-     */
-    private function handleMigrations()
+    private function handleMigrations(): void
     {
         $count = 0;
         foreach ($this->migrations as $class => $file) {

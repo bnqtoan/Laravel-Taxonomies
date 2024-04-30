@@ -1,34 +1,47 @@
-<?php namespace Lecturize\Taxonomies\Models;
+<?php
 
-use Exception;
+namespace Lecturize\Taxonomies\Models;
+
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection;
+use Webpatser\Uuid\Uuid;
 
 /**
  * Class Taxonomy
  * @package Lecturize\Taxonomies\Models
- * @property int                 $id
- * @property string|null         $parent_id
- * @property Taxonomy|null       $parent
- * @property EloquentCollection  $children
- * @property EloquentCollection  $siblings
- * @property EloquentCollection  $taxables
- * @property string|null         $alias_id
- * @property Taxonomy|null       $alias
- * @property string              $term_id
- * @property Term                $term
- * @property string              $taxonomy
- * @property string|null         $description
- * @property string|null         $content
- * @property string|null         $lead
- * @property int|null            $sort
- * @property array|null          $properties
+ * @property int                            $id
+ * @property string                         $uuid
+ * @property string|null                    $parent_id
+ * @property Taxonomy|null                  $parent
+ * @property EloquentCollection|Taxonomy[]  $children
+ * @property EloquentCollection|Taxonomy[]  $siblings
+ * @property EloquentCollection|Model[]     $taxables
+ * @property string|null                    $alias_id
+ * @property Taxonomy|null                  $alias
+ * @property string                         $term_id
+ * @property Term                           $term
+ * @property string                         $taxonomy
+ * @property string|null                    $description
+ * @property string|null                    $content
+ * @property string|null                    $lead
+ * @property string|null                    $meta_desc
+ * @property bool                           $visible
+ * @property bool                           $searchable
+ * @property int|null                       $sort
+ * @property array|null                     $properties
+ *
+ * @method static Builder|Taxonomy taxonomy(string $taxonomy)
+ * @method static Builder|Taxonomy taxonomyStartsWith(string $taxonomy_prefix)
+ * @method static Builder|Taxonomy taxonomies(array $taxonomies)
+ * @method static Builder|Taxonomy byTerm(string|int $term, string $term_field)
+ * @method static Builder|Taxonomy search(string $term, string $taxonomy)
+ * @method static Builder|Taxonomy visible()
+ * @method static Builder|Taxonomy searchable()
  */
 class Taxonomy extends Model
 {
@@ -44,20 +57,22 @@ class Taxonomy extends Model
         'description',
         'content',
         'lead',
+        'meta_desc',
 
         'sort',
+        'visible',
+        'searchable',
 
         'properties',
     ];
 
     /** @inheritdoc */
     protected $casts = [
+        'visible'    => 'boolean',
+        'searchable' => 'boolean',
         'properties' => 'array',
-    ];
 
-    /** @inheritdoc */
-    protected $dates = [
-        'deleted_at',
+        'deleted_at' => 'datetime',
     ];
 
     /** @inheritdoc */
@@ -78,14 +93,14 @@ class Taxonomy extends Model
     {
         parent::boot();
 
-        static::creating(function ($model) {
+        static::creating(function (Taxonomy $model) {
             if ($model->getConnection()
                       ->getSchemaBuilder()
                       ->hasColumn($model->getTable(), 'uuid'))
-                $model->uuid = \Webpatser\Uuid\Uuid::generate()->string;
+                $model->uuid = Uuid::generate()->string;
         });
 
-        static::saving(function ($model) {
+        static::saving(function (Taxonomy $model) {
             if (isset($model->term) && $model->term->title && ! $model->description)
                 $model->description = $model->term->title;
 
@@ -97,11 +112,12 @@ class Taxonomy extends Model
     }
 
     /**
-     * Get the term, that will be displayed as this taxonomies (categories) title.
+     * Get the term, that will be displayed as these taxonomies (categories) title.
      *
      * @return BelongsTo
      */
-    public function term() {
+    public function term(): BelongsTo
+    {
         return $this->belongsTo(config('lecturize.taxonomies.terms.model', Term::class));
     }
 
@@ -149,48 +165,17 @@ class Taxonomy extends Model
     }
 
     /**
-     * Return the related items.
-     *
-     * @return HasMany
-     */
-    public function taxables(): HasMany
-    {
-        return $this->hasMany(Taxable::class, 'taxonomy_id');
-    }
-
-    /**
-     * An example for related posts.
-     *
-     * @return MorphToMany
-     */
-    public function posts(): MorphToMany
-    {
-        return $this->morphedByMany(config('lecturize.community.posts.model', 'App\Models\Posts\Post'), 'taxable', 'taxables');
-    }
-
-    /**
-     * An example for related products.
-     *
-     * @return MorphToMany
-     */
-    public function products(): MorphToMany
-    {
-        return $this->morphedByMany(config('lecturize.shop.products.model', 'Lecturize\Shop\Products\Product'), 'taxable', 'taxables');
-    }
-
-    /**
      * Get the breadcrumbs for this Taxonomy.
      *
      * @param  bool  $exclude_self
      * @return Collection
-     * @throws Exception
      */
     public function getBreadcrumbs(bool $exclude_self = true): Collection
     {
-        $key = "taxonomies.{$this->id}.breadcrumbs";
+        $key = "taxonomies.$this->id.breadcrumbs";
         $key.= $exclude_self ? '.self-excluded' : '';
 
-        return cache()->remember($key, now()->addMonth(), function() use($exclude_self) {
+        return maybe_tagged_cache(['taxonomies', 'taxonomies:taxonomy', "taxonomies:taxonomy:$this->id"])->rememberForever($key, function() use($exclude_self) {
             $parameters = $this->getParentBreadcrumbs();
 
             if (! $exclude_self)
@@ -205,7 +190,6 @@ class Taxonomy extends Model
      *
      * @param  Collection|null  $parameters
      * @return Collection
-     * @throws Exception
      */
     function getParentBreadcrumbs(?Collection $parameters = null): Collection
     {
@@ -229,18 +213,17 @@ class Taxonomy extends Model
      *
      * @param  bool  $exclude_taxonomy
      * @return array
-     * @throws Exception
      */
     public function getRouteParameters(bool $exclude_taxonomy = true): array
     {
-        $key = "taxonomies.{$this->id}.breadcrumbs";
+        $key = "taxonomies.$this->id.route-parameters";
         $key.= $exclude_taxonomy ? '.without-taxonomy' : '';
 
-        return cache()->remember($key, now()->addMonth(), function() use($exclude_taxonomy) {
+        return maybe_tagged_cache(['taxonomies', 'taxonomies:taxonomy', "taxonomies:taxonomy:$this->id"])->rememberForever($key, function() use($exclude_taxonomy) {
             $parameters = $this->getParentSlugs();
 
             if (! $exclude_taxonomy)
-                array_push($parameters, $this->taxonomy);
+                $parameters[] = $this->taxonomy;
 
             return array_reverse($parameters);
         });
@@ -254,7 +237,7 @@ class Taxonomy extends Model
      */
     function getParentSlugs(array $parameters = []): array
     {
-        array_push($parameters, $this->term->slug);
+        $parameters[] = $this->term->slug;
 
         if ($parent = $this->parent)
             return $parent->getParentSlugs($parameters);
@@ -306,7 +289,7 @@ class Taxonomy extends Model
      * @param  string      $term_field
      * @return Builder
      */
-    public function scopeTerm(Builder $query, $term, string $term_field = 'title'): Builder
+    public function scopeByTerm(Builder $query, string|int $term, string $term_field = 'title'): Builder
     {
         $term_field = ! in_array($term_field, ['id', 'title', 'slug']) ? 'title' : $term_field;
 
@@ -328,5 +311,27 @@ class Taxonomy extends Model
         return $query->whereHas('term', function(Builder $q) use($term, $taxonomy) {
             $q->where('title', 'like', '%'. $term .'%');
         });
+    }
+
+    /**
+     * Scope visible taxonomies.
+     *
+     * @param  Builder  $query
+     * @return Builder
+     */
+    public function scopeVisible(Builder $query): Builder
+    {
+        return $query->where('visible', 1);
+    }
+
+    /**
+     * Scope searchable taxonomies.
+     *
+     * @param  Builder  $query
+     * @return Builder
+     */
+    public function scopeSearchable(Builder $query): Builder
+    {
+        return $query->where('searchable', 1);
     }
 }
