@@ -22,9 +22,9 @@
     ],
     "require": {
         "php": "^8.2",
-        "cviebrock/eloquent-sluggable" : "^9.0|^10.0|^11.0",
-        "illuminate/database": "^9.0|^10.0|^11.0",
-        "illuminate/support": "^9.0|^10.0|^11.0",
+        "cviebrock/eloquent-sluggable" : "^11.0",
+        "illuminate/database": "^11.0",
+        "illuminate/support": "^11.0",
         "webpatser/laravel-uuid": "^3.0|^4.0"
     },
     "require-dev": {
